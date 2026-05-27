@@ -140,6 +140,17 @@ To fix this after upgrading:
 
 ![macOS Accessibility Settings Reset](./docs/accessibility.png)
 
+## Disclaimer & No Warranty
+
+**CRITICAL: USE AT YOUR OWN RISK.**
+
+ShieldLock is a low-level system utility that intercepts system inputs and restricts macOS system behaviors. 
+
+By using this software, you agree that:
+- **No Liability**: The author and contributors of ShieldLock assume **absolutely no responsibility or liability** for any accidental GUI lockouts, system crashes, data loss, or bricked server access.
+- **No Warranty**: The software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, or non-infringement.
+- **Buyer Beware**: If you get locked out of your Mac, you are solely responsible for recovering it (e.g., using the remote SSH or local Safe Mode recovery methods detailed above).
+
 ## License
 
 This project is licensed under the MIT License - see `./LICENSE` for details.
