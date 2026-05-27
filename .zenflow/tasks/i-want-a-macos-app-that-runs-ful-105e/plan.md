@@ -69,7 +69,7 @@ Save to `{@artifacts_path}/plan.md`.
   - Run `swift build -c release` to compile the app.
   - Create the bundle directory structure: `./build/ShieldLock.app/Contents/MacOS/` and `./build/ShieldLock.app/Contents/Resources/`.
   - Copy the compiled binary from `.build/release/ShieldLock` to `./build/ShieldLock.app/Contents/MacOS/ShieldLock`.
-  - Generate the `./build/ShieldLock.app/Contents/Info.plist` with `LSUIElement` set to `true` (to run as an accessory/background app) and `CFBundlePackageType` set to `APPL`.
+  - Generate the `./build/ShieldLock.app/Contents/Info.plist` with `LSUIElement` set to `true` (to run as an accessory/background app), `CFBundlePackageType` set to `APPL`, and include the `NSFaceIDUsageDescription` entitlement key with a descriptive description string to grant Face ID/Touch ID biometrics permission.
   - Sign the bundle with ad-hoc code signature: `codesign --force --deep --sign - ./build/ShieldLock.app`.
 - **Verification**: Run `./build.sh`, verify it completes successfully, and verify the app bundle is compiled, structured correctly, and signed with `codesign -dvvvv ./build/ShieldLock.app`.
 
@@ -81,11 +81,12 @@ Save to `{@artifacts_path}/plan.md`.
   - Add an interactive button labeled "Open System Settings" that opens `x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility`.
   - Run the `NSApplication` event loop in this fallback state (do not engage full-screen lock windows).
 - If permissions ARE trusted:
-  - Run the app in background/accessory mode (empty for now).
+  - In `AppDelegate.applicationDidFinishLaunching`, attempt to register the application as a persistent login item using the native `SMAppService.mainApp.register()` API to ensure the app starts on user login.
+  - Run the app in background/accessory mode.
 - **Verification**:
   - Revoke accessibility permissions in System Settings (if any) or run the app on a fresh target. Launch `./build/ShieldLock.app` and verify the titled helper window appears with the "Open System Settings" button.
   - Click the button to confirm it opens System Settings.
-  - Enable accessibility permissions for the app, relaunch, and verify the standard window does not appear.
+  - Enable accessibility permissions for the app, relaunch, and verify the standard window does not appear and that the app successfully registers itself as a Login Item under System Settings.
 
 ### [ ] Step: Full-Screen Lock Windows and Sleep Prevention
 - Implement `LockWindow` (subclass of `NSWindow`) and `LockContentView` (subclass of `NSView`) in a new file `Sources/LockWindow.swift`.
@@ -96,11 +97,13 @@ Save to `{@artifacts_path}/plan.md`.
   - Collection behavior: `[.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]` to pin the window to all Spaces and exclude it from window cycling.
   - Background color: `NSColor(white: 0.0, alpha: 0.005)` to capture mouse events while remaining transparent.
   - Set `ignoresMouseEvents = false` and ensure the window is ordered front (`makeKeyAndOrderFront(nil)`).
+- Implement Dynamic Screen Layout Handling: Subscribe to `NSApplication.didChangeScreenParametersNotification` in `main.swift` to dynamically destroy existing lock windows and recreate fresh lock windows covering all screens whenever display configurations or screen resolutions change.
 - Implement display and system sleep prevention on launch using `IOPMAssertionCreateWithName` from `IOKit` with type `kIOPMAssertionTypePreventUserIdleDisplaySleep` and `kIOPMAssertionTypePreventUserIdleSystemSleep`.
 - Release assertions and clean up windows on application termination.
 - **Verification**:
   - Run `./build.sh` and launch the app.
   - Verify that a fully transparent screen overlay is rendered across all displays (the screen looks normal but clicks on any background windows/desktop are intercepted and ignored).
+  - Verify that plugging in/unplugging displays or changing resolutions dynamically recreates lock windows on all active screens with no unprotected gaps.
   - Verify that the terminal process/system remains awake.
 
 ### [ ] Step: Input Interception and System Event Tap
@@ -130,18 +133,16 @@ Save to `{@artifacts_path}/plan.md`.
   - For other key presses, consume the event and show a brief HUD/visual hint ("Double-click or press 'U' to unlock").
 - In `LockContentView`, monitor mouse/trackpad events:
   - Detect double-clicks (`event.clickCount == 2`). On double-click, trigger the `LocalAuthentication` flow.
-- Implement secure authentication handling using `LAContext` to prevent deadlocks:
-  1. Temporarily disable the global event tap (`CGEventTapEnable(tapPort, false)`).
-  2. Suspend AppKit kiosk presentation options (`NSApplication.shared.presentationOptions = []`).
-  3. Lower lock windows levels to `.normal` and set `ignoresMouseEvents = true` so the user can interact with the system Touch ID / password prompt sheet.
-  4. Perform `LAContext.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock ShieldLock")`.
-  5. On callback completion (success, cancellation, or failure):
-     - Restore all lock windows to level `.screenSaver`, and set `ignoresMouseEvents = false`.
-     - Re-enable the event tap and restore native presentation options.
-     - If authentication succeeded, call `unlockAndExit()`. If failed/canceled, keep the overlay locked.
+- Implement secure authentication handling using `LAContext` to prevent deadlocks and ensure continuous security:
+  1. Temporarily disable only the global event tap (`CGEventTapEnable(tapPort, false)`) to prevent interception of inputs aimed at the OS authentication prompt.
+  2. **Do NOT lower lock windows levels to `.normal` or set `ignoresMouseEvents = true` or disable AppKit kiosk presentation options**. The overlay windows must remain at `.screenSaver` level and active to consume any background interactions and prevent unauthorized bypass. The system Touch ID/Password dialog displays automatically above all standard application windows and receives secure input safely.
+  3. Perform `LAContext.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock ShieldLock")`.
+  4. On callback completion (success, cancellation, or failure):
+     - Re-enable the global event tap (`CGEventTapEnable(tapPort, true)`).
+     - If authentication succeeded, call `unlockAndExit()`. If failed/canceled, keep the overlay locked and armed.
 - **Verification**:
   - Launch ShieldLock. Verify that pressing 'U' (or 'u') immediately exits the app and restores all normal system behaviors.
   - Relaunch ShieldLock. Double-click on the screen. Verify that the Touch ID / Password prompt dialog is presented.
-  - Verify that during the prompt, you can interact with the dialog (Touch ID works, or typing the system password works).
-  - Verify that clicking "Cancel" in the prompt re-locks the screen immediately, re-enabling input interception, event tap, and AppKit kiosk options.
+  - Verify that during the prompt, background windows are completely non-interactive and secure against any bypass attempts.
+  - Verify that clicking "Cancel" in the prompt re-locks the screen immediately, re-enabling the event tap.
   - Verify that authenticating successfully exits the app cleanly.

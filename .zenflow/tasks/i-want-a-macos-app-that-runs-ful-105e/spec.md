@@ -47,6 +47,10 @@ To protect against multi-monitor setups and prevent any gaps, the app queries `N
     - `hasShadow = false`
     - `ignoresMouseEvents = false` (Captures mouse clicks, hover, scroll wheel).
 
+- **Dynamic Display Layout Handling**:
+  - The application will observe `NSApplication.didChangeScreenParametersNotification` using the default `NotificationCenter`.
+  - Upon receiving this notification, the app will dynamically recalculate the layout: it will destroy any existing `LockWindow` instances and instantly recreate a `LockWindow` overlay for each screen currently in `NSScreen.screens`. This guarantees that if a monitor is plugged in, unplugged, or resolution changes at runtime, there are never any unprotected gaps.
+
 ### 2.3. Input Interception & Suppression
 To completely secure the machine, ShieldLock uses a dual-layer interception approach:
 
@@ -67,38 +71,22 @@ To completely secure the machine, ShieldLock uses a dual-layer interception appr
 2. **Global Input Interception (`CGEventTap`)**:
    - To intercept trackpad swipe gestures, Mission Control (F3), Dashboard/Launchpad (F4), and Spotlight (Command-Space), the app attempts to register a local/global event tap using `CGEvent.tapCreate` targeting `.cgSessionEventTap` or `.cghidEventTap`.
    - If Accessibility permissions are not yet granted, the event tap setup fails gracefully, falling back to the AppKit Presentation Options, which still fully block the Dock, Menu Bar, Command-Tab, and Force Quit.
+   - **Sandbox Enforcement Note**: Because the global event tap (`CGEventTap`) requires high-level system interception capabilities, App Sandboxing must be disabled for this application. Since we compile and sign locally without an Xcode target template, the application runs unsandboxed by default.
 
 ### 2.4. Unlocking Mechanisms & Interception Deadlock Avoidance
 - **Double-Click Trigger**:
   - The window content view overrides `mouseDown(with:)`. If `event.clickCount == 2`, the local authentication flow is triggered.
 - **Authentication Flow (`LocalAuthentication`) & Deadlock Avoidance**:
   - **The Deadlock Challenge**: When Touch ID/Password prompts appear, they are hosted by the system's authentication service. If our high-level `LockWindow` (at `.screenSaver` level) and global `CGEventTap` remain active, they will intercept and consume keyboard and mouse inputs, making it impossible for the user to select the Touch ID dialog or type their password (resulting in a complete input deadlock).
-  - **The Safe Authentication Flow**:
-    1. **Suspend Interception**: Immediately prior to calling `evaluatePolicy`, the app will:
-       - Temporarily disable the event tap: `CGEventTapEnable(tapPort, false)`.
-       - Suspend native presentation blocking: `NSApplication.shared.presentationOptions = []`.
-       - Configure lock windows to temporarily allow mouse pass-through and lower their level:
-         ```swift
-         for window in windows {
-             window.level = .normal
-             window.ignoresMouseEvents = true
-         }
-         ```
-    2. **Trigger Evaluation**:
+  - **The Safe & Secure Authentication Flow**:
+    1. **Suspend Event Tap Interception Only**: Immediately prior to calling `evaluatePolicy`, the app will temporarily disable the low-level `CGEventTap`: `CGEventTapEnable(tapPort, false)`.
+    2. **Maintain Overlay Window Shield and Presentation Options**: The transparent overlay windows will remain fully active at `.screenSaver` level and `ignoresMouseEvents` remains `false`. AppKit kiosk presentation options (hiding Dock, hiding Menu Bar, and disabling Command-Tab switching) will remain active. Since the OS-level biometrics prompt and password sheets (managed by the system's `LocalAuthentication` daemon) automatically display above standard window levels in their own secure context and capture input, the user can authenticate without a deadlock. Crucially, any clicks outside the system prompt will hit our transparent overlay windows and be consumed, preventing any security bypass.
+    3. **Trigger Evaluation**:
        - Instantiate `LAContext`.
        - Check `canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)`.
        - Call `evaluatePolicy(_:localizedReason:reply:)` asynchronously. This shows the system Touch ID dialog.
-    3. **Resume Interception**: Upon completion of the authentication block (successful, failed, or canceled), the app will dispatch back to the main thread and restore the security state:
-       - Restore lock windows:
-         ```swift
-         for window in windows {
-             window.level = .screenSaver
-             window.ignoresMouseEvents = false
-             window.makeKeyAndOrderFront(nil)
-         }
-         ```
-       - Restore presentation blocking: `NSApplication.shared.presentationOptions = [.hideDock, .hideMenuBar, .disableProcessSwitching, ...]`
-       - Re-enable the event tap: `CGEventTapEnable(tapPort, true)`.
+    4. **Resume Interception**: Upon completion of the authentication block (successful, failed, or canceled), the app will dispatch back to the main thread:
+       - Re-enable the global event tap: `CGEventTapEnable(tapPort, true)`.
        - If authentication succeeded, invoke `unlockAndExit()`. If it failed, the lock remains fully active and armed.
 - **Fail-Safe 'U' Key**:
   - If a user presses the 'U' key (regardless of upper/lower case) on the keyboard, the app immediately bypasses authentication and performs `unlockAndExit()`. This is a vital fail-safe for the initial MVP to prevent the user from being locked out in case of local authentication bugs.
@@ -126,6 +114,23 @@ On macOS, low-level event taps (`CGEventTap`) require System Accessibility Permi
   3. **If trusted**:
      - Proceed directly to engaging the secure full-screen transparent lock windows and registering the event tap.
 
+### 2.6. Launch-on-Login (Persistent Execution)
+To satisfy the requirement that the application starts on login, ShieldLock will integrate native login-item management using the macOS `ServiceManagement` framework's `SMAppService` API (supported in macOS 13.0+ / Ventura and newer).
+
+- **Registration Flow**:
+  - In `AppDelegate.applicationDidFinishLaunching`, if accessibility permissions are trusted, the application will attempt to register itself as a login item:
+    ```swift
+    import ServiceManagement
+    do {
+        if SMAppService.mainApp.status == .notRegistered {
+            try SMAppService.mainApp.register()
+        }
+    } catch {
+        print("Login item registration failed: \(error)")
+    }
+    ```
+  - This ensures that the transparent shield is armed automatically whenever the user logs into their macOS user account.
+
 ---
 
 ## 3. Source Code Structure Changes
@@ -133,9 +138,9 @@ On macOS, low-level event taps (`CGEventTap`) require System Accessibility Permi
 The following new files will be created in the repository:
 
 - **`./Package.swift`**: Defines the SPM package name, target executables, and dependencies.
-- **`./Sources/main.swift`**: Handles accessibility trust validation, standard helper window (if untrusted), `NSApplication` startup, `AppDelegate` lifecycle events, sleep prevention assertions, global presentation options, event tap setup, and the `unlockAndExit` teardown.
+- **`./Sources/main.swift`**: Handles accessibility trust validation, standard helper window (if untrusted), `NSApplication` startup, `AppDelegate` lifecycle events, sleep prevention assertions, global presentation options, event tap setup, login-item auto-launch registration, and the `unlockAndExit` teardown.
 - **`./Sources/LockWindow.swift`**: Houses `LockWindow` (subclass of `NSWindow`) and `LockContentView` (subclass of `NSView`) containing the input interceptors, double-click responder, and key-press monitors.
-- **`./build.sh`**: A shell script to compile the Swift target, build the `./build/ShieldLock.app` bundle hierarchy, generate `./build/ShieldLock.app/Contents/Info.plist`, and apply an ad-hoc code signature to ensure it runs correctly on Apple Silicon/ARM64 macOS machines:
+- **`./build.sh`**: A shell script to compile the Swift target, build the `./build/ShieldLock.app` bundle hierarchy, generate `./build/ShieldLock.app/Contents/Info.plist` (which must include the `LSUIElement = true` key to hide the app from Dock/switching, and the `NSFaceIDUsageDescription` key with a descriptive description string to grant Face ID/Touch ID biometrics permission), and apply an ad-hoc code signature to ensure it runs correctly on Apple Silicon/ARM64 macOS machines:
   ```bash
   codesign --force --deep --sign - ./build/ShieldLock.app
   ```
