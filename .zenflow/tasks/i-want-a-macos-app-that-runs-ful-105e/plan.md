@@ -109,7 +109,8 @@ Save to `{@artifacts_path}/plan.md`.
   - Verify that plugging in/unplugging displays or changing resolutions dynamically recreates lock windows on all active screens with no unprotected gaps.
   - Verify that the terminal process/system remains awake.
 
-### [ ] Step: Input Interception and System Event Tap
+### [x] Step: Input Interception and System Event Tap
+<!-- chat-id: a3beada6-ec93-419e-9ff0-74b3b2a39b92 -->
 - In `main.swift`, set native AppKit presentation options when lock windows are active to restrict system keys and switching:
   ```swift
   NSApplication.shared.presentationOptions = [

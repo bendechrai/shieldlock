@@ -79,8 +79,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         NSApp.setActivationPolicy(.accessory)
         
+        NSApplication.shared.presentationOptions = [
+            .hideDock,
+            .hideMenuBar,
+            .disableProcessSwitching,
+            .disableForceQuit,
+            .disableSessionTermination,
+            .disableHideApplication
+        ]
+        
         preventSleep()
         setupLockWindows()
+        setupEventTap()
         
         NotificationCenter.default.addObserver(
             self,
@@ -101,6 +111,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             lockWindows.append(lockWindow)
             lockWindow.makeKeyAndOrderFront(nil)
         }
+    }
+    
+    private func setupEventTap() {
+        let eventMask = (1 << CGEventType.keyDown.rawValue) |
+                        (1 << CGEventType.keyUp.rawValue) |
+                        (1 << CGEventType.flagsChanged.rawValue) |
+                        (1 << 29) |
+                        (1 << 30)
+        
+        guard let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: CGEventMask(eventMask),
+            callback: eventTapCallback,
+            userInfo: nil
+        ) else {
+            return
+        }
+        
+        EventTapHolder.eventTap = tap
+        let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
     }
     
     @objc private func screenParametersChanged(_ notification: Notification) {
@@ -153,6 +187,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.close()
         }
         lockWindows.removeAll()
+        NSApplication.shared.presentationOptions = []
     }
     
     @objc func openSystemSettings(_ sender: Any) {
@@ -164,6 +199,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return !isTrusted
     }
+}
+
+struct EventTapHolder {
+    nonisolated(unsafe) static var eventTap: CFMachPort?
+}
+
+private func eventTapCallback(
+    proxy: CGEventTapProxy,
+    type: CGEventType,
+    event: CGEvent,
+    refcon: UnsafeMutableRawPointer?
+) -> Unmanaged<CGEvent>? {
+    if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+        if let tap = EventTapHolder.eventTap {
+            CGEvent.tapEnable(tap: tap, enable: true)
+        }
+        return nil
+    }
+    
+    if type == .keyDown || type == .keyUp {
+        if let nsEvent = NSEvent(cgEvent: event) {
+            let chars = nsEvent.charactersIgnoringModifiers ?? ""
+            if chars.lowercased() == "u" {
+                return Unmanaged.passRetained(event)
+            }
+        }
+    }
+    
+    return nil
 }
 
 struct AppGlobals {

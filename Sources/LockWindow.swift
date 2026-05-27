@@ -9,6 +9,14 @@ class LockContentView: NSView {
     required init?(coder: NSCoder) {
         super.init(coder: coder)
     }
+    
+    override func mouseDown(with event: NSEvent) {}
+    override func mouseUp(with event: NSEvent) {}
+    override func rightMouseDown(with event: NSEvent) {}
+    override func rightMouseUp(with event: NSEvent) {}
+    override func otherMouseDown(with event: NSEvent) {}
+    override func otherMouseUp(with event: NSEvent) {}
+    override func scrollWheel(with event: NSEvent) {}
 }
 
 @MainActor
