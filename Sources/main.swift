@@ -20,8 +20,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let windowWidth: CGFloat = 450
         let windowHeight: CGFloat = 200
         
-        let mainScreen = NSScreen.main ?? NSScreen.screens.first ?? NSScreen()
-        let screenFrame = mainScreen.frame
+        let mainScreen = NSScreen.main ?? NSScreen.screens.first
+        let screenFrame = mainScreen?.frame ?? NSRect(x: 0, y: 0, width: 800, height: 600)
         let windowFrame = NSRect(
             x: screenFrame.midX - windowWidth / 2,
             y: screenFrame.midY - windowHeight / 2,
