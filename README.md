@@ -36,10 +36,18 @@ The script will compile the project in release mode, structure the bundle with p
 
 ## Running ShieldLock
 
-Start the application with:
+By default, launching ShieldLock will instantly lock all displays for seamless on-login and on-boot security:
 
 ```bash
 open ./build/ShieldLock.app
+```
+
+### Options
+
+If you are developing, testing, or want a safeguard prompt before locking, pass the `--confirm` flag:
+
+```bash
+open ./build/ShieldLock.app --args --confirm
 ```
 
 On first launch, if Accessibility permissions have not been granted, a helper window will appear with a button to open System Settings directly. Once granted, relaunch ShieldLock to secure the system.

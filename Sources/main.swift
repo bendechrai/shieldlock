@@ -80,19 +80,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
         }
         
-        NSApp.activate(ignoringOtherApps: true)
+        let showConfirm = CommandLine.arguments.contains("--confirm")
         
-        let alert = NSAlert()
-        alert.messageText = "Lock Screen?"
-        alert.informativeText = "ShieldLock will lock all displays and capture system gestures and inputs.\n\nTo unlock, double-click anywhere on the screen and authenticate using Touch ID or your password."
-        alert.addButton(withTitle: "Lock")
-        alert.addButton(withTitle: "Cancel")
-        
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            engageScreenLock()
+        if showConfirm {
+            NSApp.activate(ignoringOtherApps: true)
+            
+            let alert = NSAlert()
+            alert.messageText = "Lock Screen?"
+            alert.informativeText = "ShieldLock will lock all displays and capture system gestures and inputs.\n\nTo unlock, double-click anywhere on the screen and authenticate using Touch ID or your password."
+            alert.addButton(withTitle: "Lock")
+            alert.addButton(withTitle: "Cancel")
+            
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                engageScreenLock()
+            } else {
+                NSApp.terminate(nil)
+            }
         } else {
-            NSApp.terminate(nil)
+            engageScreenLock()
         }
     }
     
@@ -301,8 +307,15 @@ func main() {
     let isTrusted = AXIsProcessTrusted()
     delegate.isTrusted = isTrusted
     
-    // Always start as regular to allow the fallback window or confirmation modal to get proper focus
-    app.setActivationPolicy(.regular)
+    let showConfirm = CommandLine.arguments.contains("--confirm")
+    
+    if !isTrusted {
+        app.setActivationPolicy(.regular)
+    } else if showConfirm {
+        app.setActivationPolicy(.regular)
+    } else {
+        app.setActivationPolicy(.accessory)
+    }
     
     AppGlobals.delegate = delegate
     app.delegate = delegate
