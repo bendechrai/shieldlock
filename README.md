@@ -21,6 +21,17 @@ ShieldLock is an open-source, full-screen transparent screen locker for macOS. I
 - Swift 5.8 or later
 - Accessibility permissions granted to the application (the app will prompt you with instructions on launch)
 
+## Installation
+
+You can install ShieldLock directly using Homebrew:
+
+```bash
+brew tap bendechrai/homebrew-tap
+brew install --cask shieldlock
+```
+
+Alternatively, you can download the latest `ShieldLock.zip` from the [GitHub Releases](https://github.com/bendechrai/shieldlock/releases) page, extract it, and copy `ShieldLock.app` to your `/Applications` folder.
+
 ## Project Structure
 
 - `./Package.swift`: Swift Package Manager configuration.
