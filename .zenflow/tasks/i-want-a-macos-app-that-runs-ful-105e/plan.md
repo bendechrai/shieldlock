@@ -74,7 +74,8 @@ Save to `{@artifacts_path}/plan.md`.
   - Sign the bundle with ad-hoc code signature: `codesign --force --deep --sign - ./build/ShieldLock.app`.
 - **Verification**: Run `./build.sh`, verify it completes successfully, and verify the app bundle is compiled, structured correctly, and signed with `codesign -dvvvv ./build/ShieldLock.app`.
 
-### [ ] Step: Accessibility Bootstrapping and Help Window
+### [x] Step: Accessibility Bootstrapping and Help Window
+<!-- chat-id: 200f1ea5-565e-47ad-99f7-b8178dc9520a -->
 - In `Sources/main.swift`, check if accessibility permissions are authorized using `AXIsProcessTrusted()`.
 - If permissions are NOT trusted:
   - Create and configure a standard interactive titled window (`NSWindowStyleMask.titled`) centered on the primary screen.
