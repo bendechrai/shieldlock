@@ -99,6 +99,43 @@ If you are completely locked out of the GUI (e.g. keyboard/mouse is not register
    - Safe Mode prevents third-party Login Items (including ShieldLock) from launching automatically.
    - Once logged in, go to **System Settings > General > Login Items** and remove ShieldLock, or delete the `ShieldLock.app` bundle to disable it.
 
+## Troubleshooting & macOS Security
+
+Because ShieldLock requires low-level system access (Accessibility Permissions and Event Taps) and is compiled with ad-hoc signatures, you must handle the following macOS Gatekeeper security controls:
+
+### 1. Bypassing macOS Gatekeeper Quarantine (First-Time Run)
+
+When you download a pre-built `ShieldLock.app` from GitHub Releases or install it, macOS will flag it as an "unidentified developer" and block it. You can bypass this quarantine in one of two ways:
+
+#### Method A: Click "Open Anyway" (GUI)
+1. Double-click the app bundle, click **Cancel** on the initial warning pop-up.
+2. Navigate to **System Settings > Privacy & Security** and scroll down to the **Security** section.
+3. Click the **Open Anyway** button.
+4. Enter your system password and click **Open** when prompted.
+
+![macOS Gatekeeper Warning and Open Anyway](./docs/gatekeeper.png)
+
+#### Method B: Remove Quarantine Flag (Terminal)
+If you prefer using the command line, remove the quarantine attribute directly by running:
+```bash
+xattr -d com.apple.quarantine /path/to/ShieldLock.app
+```
+
+---
+
+### 2. Upgrading & Resetting Accessibility Permissions
+
+macOS ties Accessibility permissions directly to the binary's cryptographic hash for ad-hoc signed applications. **Whenever you upgrade to a new version of ShieldLock, macOS will silently invalidate the previously granted permissions** (even if the toggle in settings still shows as "On").
+
+To fix this after upgrading:
+1. Open **System Settings > Privacy & Security > Accessibility**.
+2. Select **ShieldLock** in the list of applications.
+3. Click the **`-` (Minus)** button at the bottom of the list to delete it completely.
+4. Launch the new version of ShieldLock.
+5. When the ShieldLock helper window prompts you, click **Open System Settings** and grant Accessibility permissions freshly.
+
+![macOS Accessibility Settings Reset](./docs/accessibility.png)
+
 ## License
 
 This project is licensed under the MIT License - see `./LICENSE` for details.
