@@ -44,6 +44,24 @@ open ./build/ShieldLock.app
 
 On first launch, if Accessibility permissions have not been granted, a helper window will appear with a button to open System Settings directly. Once granted, relaunch ShieldLock to secure the system.
 
+## Releasing to GitHub and Homebrew Cask
+
+An automated release script `./release.sh` is provided to streamline the manual distribution workflow:
+
+```bash
+./release.sh
+```
+
+This script will:
+1. Prompt you for a release version (e.g., `1.0.0`).
+2. Verify your git working directory is clean.
+3. Compile the application locally.
+4. Package the secure app bundle into a `ShieldLock.zip`.
+5. Compute the required SHA256 checksum for your Homebrew Cask.
+6. Create and push a version tag (e.g., `v1.0.0`) to your GitHub repository.
+7. Create a GitHub Release and upload `ShieldLock.zip` using the `gh` CLI.
+8. Output the ready-to-use Homebrew Cask configuration block with the updated version, download URL, and SHA256 checksum!
+
 ## Unlocking ShieldLock
 
 There are two ways to unlock and close the app:
