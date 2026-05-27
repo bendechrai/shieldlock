@@ -54,11 +54,20 @@ There are two ways to unlock and close the app:
 ### Emergency Recovery / Locked Out?
 
 If you are completely locked out of the GUI (e.g. keyboard is not registering input or the unlock key fails):
-- **SSH into the machine** from another device on your network and terminate the ShieldLock process:
-  ```bash
-  killall ShieldLock
-  ```
-  This will instantly dismiss all lock windows, release the event tap, restore standard system presentation options (Dock and Menu Bar), and terminate the application safely.
+
+1. **Via SSH (Remote Recovery)**:
+   - SSH into the machine from another device on your network and terminate the ShieldLock process:
+     ```bash
+     killall ShieldLock
+     ```
+     This will instantly dismiss all lock windows, release the event tap, restore standard system presentation options (Dock and Menu Bar), and terminate the application safely.
+
+2. **Via Safe Mode (Local Recovery)**:
+   - If you cannot SSH in, force-restart your Mac and boot into **Safe Mode**:
+     - **Apple Silicon (M1/M2/M3)**: Shut down your Mac. Press and hold the power button until you see "Loading startup options". Select your startup disk, then press and hold the **Shift** key and click **Continue in Safe Mode**.
+     - **Intel Mac**: Restart your Mac and immediately press and hold the **Shift** key until you see the login window.
+   - Safe Mode prevents third-party Login Items (including ShieldLock) from launching automatically.
+   - Once logged in, go to **System Settings > General > Login Items** and remove ShieldLock, or delete the `ShieldLock.app` bundle to disable it.
 
 ## License
 
