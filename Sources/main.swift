@@ -147,6 +147,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationWillTerminate(_ notification: Notification) {
+        NotificationCenter.default.removeObserver(self)
         allowSleep()
         for window in lockWindows {
             window.close()
