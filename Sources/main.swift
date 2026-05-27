@@ -15,6 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var hasDisplayAssertion = false
     private var hasSystemAssertion = false
     private var isAuthenticating = false
+    private var permissionTimer: Timer?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !isTrusted {
@@ -53,7 +54,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         label.isBordered = false
         label.drawsBackground = false
         label.alignment = .center
-        label.stringValue = "ShieldLock requires Accessibility Permissions to secure the keyboard/gestures.\n\nPlease grant permissions in System Settings > Privacy & Security > Accessibility, then relaunch the app."
+        label.stringValue = "ShieldLock requires Accessibility Permissions to secure the keyboard/gestures.\n\nPlease grant permissions in System Settings > Privacy & Security > Accessibility.\n\n(The app will automatically detect once permissions are granted!)"
         label.font = NSFont.systemFont(ofSize: 14)
         contentView.addSubview(label)
         
@@ -70,6 +71,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         
         self.window = win
+        startPermissionPolling()
+    }
+    
+    private func startPermissionPolling() {
+        permissionTimer?.invalidate()
+        permissionTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                if AXIsProcessTrusted() {
+                    self.permissionTimer?.invalidate()
+                    self.permissionTimer = nil
+                    
+                    self.window?.close()
+                    self.window = nil
+                    
+                    self.isTrusted = true
+                    self.setupTrustedState()
+                }
+            }
+        }
     }
     
     private func setupTrustedState() {
@@ -220,6 +241,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationWillTerminate(_ notification: Notification) {
+        permissionTimer?.invalidate()
+        permissionTimer = nil
         NotificationCenter.default.removeObserver(self)
         allowSleep()
         for window in lockWindows {
