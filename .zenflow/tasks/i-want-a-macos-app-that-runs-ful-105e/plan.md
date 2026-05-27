@@ -60,7 +60,8 @@ If the feature is trivial and doesn't warrant full specification, update this wo
 
 Save to `{@artifacts_path}/plan.md`.
 
-### [ ] Step: Setup SPM and Build Scaffolding
+### [x] Step: Setup SPM and Build Scaffolding
+<!-- chat-id: 43d0f368-c551-4e76-8358-fb7060e60da4 -->
 - Create `.gitignore` to ignore common macOS and build artifacts (e.g., `.DS_Store`, `.build/`, `build/`).
 - Create `Package.swift` to declare a Swift executable target named `ShieldLock`.
 - Create target directory `Sources/`.
