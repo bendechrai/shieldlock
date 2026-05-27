@@ -8,7 +8,7 @@ ShieldLock is an open-source, full-screen transparent screen locker for macOS. I
 - **Input & Gesture Interception**: Utilizes a low-level Event Tap to block Spotlight, Command-Tab, Mission Control, Launchpad, and trackpad swipe gestures.
 - **Sleep Prevention**: Disables user idle system and display sleep automatically while active.
 - **Secure Authentication**: Supports secure biometrics (Touch ID) or macOS system password using Local Authentication (`LAContext`).
-- **Fail-Safe Unlock**: Provides a quick development or administrative override by pressing the `U` key.
+- **Confirmation Dialog**: Prompts you with an interactive confirmation alert upon launch to confirm you want to lock and explain the unlock mechanics, preventing accidental locks.
 - **Accessibility Bootstrapping**: Detects permissions on launch and displays a helper window directing the user to System Settings if Accessibility permissions are missing.
 
 ## Prerequisites
@@ -64,14 +64,13 @@ This script will:
 
 ## Unlocking ShieldLock
 
-There are two ways to unlock and close the app:
+To unlock and close ShieldLock, **double-click anywhere on any screen** to trigger the macOS Local Authentication dialog (Touch ID or your user password). 
 
-1. **Secure Biometrics/Password**: Double-click anywhere on any screen to trigger the macOS Local Authentication dialog (Touch ID or user password). During authentication, the transparent overlay remains at `.screenSaver` window level to keep background content secure.
-2. **Fail-Safe**: Press the `U` (or `u`) key on the keyboard to instantly bypass authentication and exit ShieldLock.
+During authentication, the transparent overlay remains active at `.screenSaver` window level to keep background content secure and prevent any unauthorized bypass.
 
 ### Emergency Recovery / Locked Out?
 
-If you are completely locked out of the GUI (e.g. keyboard is not registering input or the unlock key fails):
+If you are completely locked out of the GUI (e.g. keyboard/mouse is not registering input):
 
 1. **Via SSH (Remote Recovery)**:
    - SSH into the machine from another device on your network and terminate the ShieldLock process:

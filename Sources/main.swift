@@ -79,6 +79,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         } catch {
         }
+        
+        NSApp.activate(ignoringOtherApps: true)
+        
+        let alert = NSAlert()
+        alert.messageText = "Lock Screen?"
+        alert.informativeText = "ShieldLock will lock all displays and capture system gestures and inputs.\n\nTo unlock, double-click anywhere on the screen and authenticate using Touch ID or your password."
+        alert.addButton(withTitle: "Lock")
+        alert.addButton(withTitle: "Cancel")
+        
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            engageScreenLock()
+        } else {
+            NSApp.terminate(nil)
+        }
+    }
+    
+    private func engageScreenLock() {
         NSApp.setActivationPolicy(.accessory)
         
         NSApplication.shared.presentationOptions = [
@@ -262,16 +280,9 @@ private func eventTapCallback(
         return nil
     }
     
-    if type == .keyDown || type == .keyUp {
-        if let nsEvent = NSEvent(cgEvent: event) {
-            let chars = nsEvent.charactersIgnoringModifiers ?? ""
-            if chars.lowercased() == "u" {
-                return Unmanaged.passRetained(event)
-            } else if type == .keyDown {
-                Task { @MainActor in
-                    AppGlobals.delegate?.showHUDOnAllWindows()
-                }
-            }
+    if type == .keyDown {
+        Task { @MainActor in
+            AppGlobals.delegate?.showHUDOnAllWindows()
         }
     }
     
@@ -290,11 +301,8 @@ func main() {
     let isTrusted = AXIsProcessTrusted()
     delegate.isTrusted = isTrusted
     
-    if !isTrusted {
-        app.setActivationPolicy(.regular)
-    } else {
-        app.setActivationPolicy(.accessory)
-    }
+    // Always start as regular to allow the fallback window or confirmation modal to get proper focus
+    app.setActivationPolicy(.regular)
     
     AppGlobals.delegate = delegate
     app.delegate = delegate

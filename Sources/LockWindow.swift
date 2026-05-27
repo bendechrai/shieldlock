@@ -20,7 +20,7 @@ class LockContentView: NSView {
     }
     
     private func setupHUD() {
-        let labelWidth: CGFloat = 280
+        let labelWidth: CGFloat = 220
         let labelHeight: CGFloat = 30
         let x = (self.bounds.width - labelWidth) / 2
         let y = (self.bounds.height - labelHeight) / 2
@@ -32,7 +32,7 @@ class LockContentView: NSView {
         label.backgroundColor = NSColor(white: 0.0, alpha: 0.8)
         label.textColor = .white
         label.alignment = .center
-        label.stringValue = "Double-click or press 'U' to unlock"
+        label.stringValue = "Double-click to unlock"
         label.font = NSFont.systemFont(ofSize: 14, weight: .medium)
         label.wantsLayer = true
         label.layer?.cornerRadius = 10
@@ -89,12 +89,7 @@ class LockContentView: NSView {
     }
     
     override func keyDown(with event: NSEvent) {
-        let chars = event.charactersIgnoringModifiers ?? ""
-        if chars.lowercased() == "u" {
-            AppGlobals.delegate?.unlockAndExit()
-        } else {
-            showHUD()
-        }
+        showHUD()
     }
 }
 
