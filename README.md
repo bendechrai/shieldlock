@@ -51,6 +51,15 @@ There are two ways to unlock and close the app:
 1. **Secure Biometrics/Password**: Double-click anywhere on any screen to trigger the macOS Local Authentication dialog (Touch ID or user password). During authentication, the transparent overlay remains at `.screenSaver` window level to keep background content secure.
 2. **Fail-Safe**: Press the `U` (or `u`) key on the keyboard to instantly bypass authentication and exit ShieldLock.
 
+### Emergency Recovery / Locked Out?
+
+If you are completely locked out of the GUI (e.g. keyboard is not registering input or the unlock key fails):
+- **SSH into the machine** from another device on your network and terminate the ShieldLock process:
+  ```bash
+  killall ShieldLock
+  ```
+  This will instantly dismiss all lock windows, release the event tap, restore standard system presentation options (Dock and Menu Bar), and terminate the application safely.
+
 ## License
 
 This project is licensed under the MIT License - see `./LICENSE` for details.
