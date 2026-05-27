@@ -36,7 +36,12 @@ The script will compile the project in release mode, structure the bundle with p
 
 ## Running ShieldLock
 
-By default, launching ShieldLock will instantly lock all displays for seamless on-login and on-boot security:
+ShieldLock features intelligent, context-aware launch detection depending on whether it is configured as a login item:
+
+- **Launch on Login (Auto-Lock)**: If "Launch on login" is enabled, launching ShieldLock will instantly secure all displays with no interactive prompts or flashes. This is perfect for seamless, immediate protection on boot or login.
+- **Manual Launch (With Confirmation)**: If the app is launched manually and is not currently configured to launch on login, it displays an interactive confirmation modal explaining the unlock mechanics. It includes a "Lock" button, a "Cancel" button, and a checkbox to enable or disable **"Launch on login (will autolock immediately without this confirmation screen)"**.
+
+To start the application:
 
 ```bash
 open ./build/ShieldLock.app
@@ -44,7 +49,7 @@ open ./build/ShieldLock.app
 
 ### Options
 
-If you are developing, testing, or want a safeguard prompt before locking, pass the `--confirm` flag:
+If the app is already registered as a login item but you want to force the confirmation modal to display (e.g. to uncheck "Launch on login" or perform local testing), pass the `--confirm` flag:
 
 ```bash
 open ./build/ShieldLock.app --args --confirm

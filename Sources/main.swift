@@ -73,26 +73,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func setupTrustedState() {
-        do {
-            if SMAppService.mainApp.status == .notRegistered {
-                try SMAppService.mainApp.register()
-            }
-        } catch {
-        }
-        
+        let isRegistered = SMAppService.mainApp.status == .enabled
         let showConfirm = CommandLine.arguments.contains("--confirm")
         
-        if showConfirm {
+        if !isRegistered || showConfirm {
             NSApp.activate(ignoringOtherApps: true)
+            
+            let checkbox = NSButton(checkboxWithTitle: "Launch on login (will autolock immediately without this confirmation screen)", target: nil, action: nil)
+            checkbox.font = NSFont.systemFont(ofSize: 12)
+            checkbox.state = isRegistered ? .on : .off
+            checkbox.sizeToFit()
             
             let alert = NSAlert()
             alert.messageText = "Lock Screen?"
             alert.informativeText = "ShieldLock will lock all displays and capture system gestures and inputs.\n\nTo unlock, double-click anywhere on the screen and authenticate using Touch ID or your password."
             alert.addButton(withTitle: "Lock")
             alert.addButton(withTitle: "Cancel")
+            alert.accessoryView = checkbox
             
             let response = alert.runModal()
             if response == .alertFirstButtonReturn {
+                let wantLaunchOnLogin = (checkbox.state == .on)
+                do {
+                    if wantLaunchOnLogin {
+                        if SMAppService.mainApp.status != .enabled {
+                            try SMAppService.mainApp.register()
+                        }
+                    } else {
+                        if SMAppService.mainApp.status == .enabled {
+                            try SMAppService.mainApp.unregister()
+                        }
+                    }
+                } catch {
+                }
                 engageScreenLock()
             } else {
                 NSApp.terminate(nil)
@@ -307,11 +320,12 @@ func main() {
     let isTrusted = AXIsProcessTrusted()
     delegate.isTrusted = isTrusted
     
+    let isRegistered = SMAppService.mainApp.status == .enabled
     let showConfirm = CommandLine.arguments.contains("--confirm")
     
     if !isTrusted {
         app.setActivationPolicy(.regular)
-    } else if showConfirm {
+    } else if !isRegistered || showConfirm {
         app.setActivationPolicy(.regular)
     } else {
         app.setActivationPolicy(.accessory)
