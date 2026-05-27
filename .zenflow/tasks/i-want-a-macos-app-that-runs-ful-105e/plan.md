@@ -131,7 +131,8 @@ Save to `{@artifacts_path}/plan.md`.
   - Test and verify that Command-Tab (App Switcher), Command-Option-Esc (Force Quit), and Mission Control are completely blocked.
   - Verify that trackpad swipe gestures to change Spaces are completely non-functional.
 
-### [ ] Step: Authentication Flow and Fail-Safe Unlock
+### [x] Step: Authentication Flow and Fail-Safe Unlock
+<!-- chat-id: e6c4b6d7-5e58-4d9e-8622-836295eb5c21 -->
 - In `LockContentView`, monitor keyboard input events:
   - If the user presses the 'U' (or 'u') key, instantly bypass authentication and invoke the `unlockAndExit()` routine to dismiss windows, release sleep assertions, and terminate.
   - For other key presses, consume the event and show a brief HUD/visual hint ("Double-click or press 'U' to unlock").

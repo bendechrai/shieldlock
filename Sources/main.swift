@@ -3,6 +3,7 @@ import ApplicationServices
 import ServiceManagement
 import IOKit
 import IOKit.pwr_mgt
+import LocalAuthentication
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -13,6 +14,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var systemAssertionID: IOPMAssertionID = 0
     private var hasDisplayAssertion = false
     private var hasSystemAssertion = false
+    private var isAuthenticating = false
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !isTrusted {
@@ -196,6 +198,48 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    func showHUDOnAllWindows() {
+        for window in lockWindows {
+            if let contentView = window.contentView as? LockContentView {
+                contentView.showHUD()
+            }
+        }
+    }
+    
+    func unlockAndExit() {
+        NSApp.terminate(nil)
+    }
+    
+    func triggerAuthentication() {
+        guard !isAuthenticating else { return }
+        isAuthenticating = true
+        
+        if let tap = EventTapHolder.eventTap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+        }
+        
+        let context = LAContext()
+        context.localizedFallbackTitle = "Use Password"
+        
+        context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock ShieldLock") { success, error in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                
+                if let tap = EventTapHolder.eventTap {
+                    CGEvent.tapEnable(tap: tap, enable: true)
+                }
+                
+                self.isAuthenticating = false
+                
+                if success {
+                    self.unlockAndExit()
+                } else {
+                    self.showHUDOnAllWindows()
+                }
+            }
+        }
+    }
+    
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return !isTrusted
     }
@@ -223,6 +267,10 @@ private func eventTapCallback(
             let chars = nsEvent.charactersIgnoringModifiers ?? ""
             if chars.lowercased() == "u" {
                 return Unmanaged.passRetained(event)
+            } else if type == .keyDown {
+                Task { @MainActor in
+                    AppGlobals.delegate?.showHUDOnAllWindows()
+                }
             }
         }
     }
