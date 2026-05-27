@@ -1,11 +1,18 @@
 import Cocoa
 import ApplicationServices
 import ServiceManagement
+import IOKit
+import IOKit.pwr_mgt
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow?
     var isTrusted: Bool = false
+    private var lockWindows: [LockWindow] = []
+    private var displayAssertionID: IOPMAssertionID = 0
+    private var systemAssertionID: IOPMAssertionID = 0
+    private var hasDisplayAssertion = false
+    private var hasSystemAssertion = false
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !isTrusted {
@@ -71,6 +78,80 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
         }
         NSApp.setActivationPolicy(.accessory)
+        
+        preventSleep()
+        setupLockWindows()
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(screenParametersChanged),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
+    }
+    
+    private func setupLockWindows() {
+        for window in lockWindows {
+            window.close()
+        }
+        lockWindows.removeAll()
+        
+        for screen in NSScreen.screens {
+            let lockWindow = LockWindow(screen: screen)
+            lockWindows.append(lockWindow)
+            lockWindow.makeKeyAndOrderFront(nil)
+        }
+    }
+    
+    @objc private func screenParametersChanged(_ notification: Notification) {
+        setupLockWindows()
+    }
+    
+    private func preventSleep() {
+        let reason = "ShieldLock screen lock active" as CFString
+        
+        var assertionID: IOPMAssertionID = 0
+        let displayResult = IOPMAssertionCreateWithName(
+            kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
+            IOPMAssertionLevel(kIOPMAssertionLevelOn),
+            reason,
+            &assertionID
+        )
+        if displayResult == kIOReturnSuccess {
+            displayAssertionID = assertionID
+            hasDisplayAssertion = true
+        }
+        
+        var sysAssertionID: IOPMAssertionID = 0
+        let systemResult = IOPMAssertionCreateWithName(
+            kIOPMAssertionTypePreventUserIdleSystemSleep as CFString,
+            IOPMAssertionLevel(kIOPMAssertionLevelOn),
+            reason,
+            &sysAssertionID
+        )
+        if systemResult == kIOReturnSuccess {
+            systemAssertionID = sysAssertionID
+            hasSystemAssertion = true
+        }
+    }
+    
+    private func allowSleep() {
+        if hasDisplayAssertion {
+            IOPMAssertionRelease(displayAssertionID)
+            hasDisplayAssertion = false
+        }
+        if hasSystemAssertion {
+            IOPMAssertionRelease(systemAssertionID)
+            hasSystemAssertion = false
+        }
+    }
+    
+    func applicationWillTerminate(_ notification: Notification) {
+        allowSleep()
+        for window in lockWindows {
+            window.close()
+        }
+        lockWindows.removeAll()
     }
     
     @objc func openSystemSettings(_ sender: Any) {

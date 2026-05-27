@@ -90,7 +90,8 @@ Save to `{@artifacts_path}/plan.md`.
   - Click the button to confirm it opens System Settings.
   - Enable accessibility permissions for the app, relaunch, and verify the standard window does not appear and that the app successfully registers itself as a Login Item under System Settings.
 
-### [ ] Step: Full-Screen Lock Windows and Sleep Prevention
+### [x] Step: Full-Screen Lock Windows and Sleep Prevention
+<!-- chat-id: 243221fe-9423-4adc-8204-c32a4f014f20 -->
 - Implement `LockWindow` (subclass of `NSWindow`) and `LockContentView` (subclass of `NSView`) in a new file `Sources/LockWindow.swift`.
 - In `main.swift` (when trusted), query `NSScreen.screens` and create a `LockWindow` instance for every connected display.
 - Configure `LockWindow` properties:
