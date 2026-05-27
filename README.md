@@ -6,50 +6,38 @@
 
 ShieldLock is an open-source, full-screen transparent screen locker for macOS. It is designed for always-on servers (like a MacBook Air server) or presentation/booth laptops where you want the screen content to remain visible, but want to prevent unauthorized application switching, desktop swipes, or system gestures.
 
-## Features
+## Disclaimer & No Warranty
 
-- **Transparent Screen Overlay**: Recreates secure full-screen transparent windows across all connected displays.
-- **Input & Gesture Interception**: Utilizes a low-level Event Tap to block Spotlight, Command-Tab, Mission Control, Launchpad, and trackpad swipe gestures.
-- **Sleep Prevention**: Disables user idle system and display sleep automatically while active.
-- **Secure Authentication**: Supports secure biometrics (Touch ID) or macOS system password using Local Authentication (`LAContext`).
-- **Confirmation Dialog**: Prompts you with an interactive confirmation alert upon launch to confirm you want to lock and explain the unlock mechanics, preventing accidental locks.
-- **Accessibility Bootstrapping**: Detects permissions on launch and displays a helper window directing the user to System Settings if Accessibility permissions are missing.
+**CRITICAL: USE AT YOUR OWN RISK.**
+
+ShieldLock is a low-level system utility that intercepts system inputs and restricts macOS system behaviors. 
+
+By using this software, you agree that:
+- **No Liability**: The author and contributors of ShieldLock assume **absolutely no responsibility or liability** for any accidental GUI lockouts, system crashes, data loss, or bricked server access.
+- **No Warranty**: The software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, or non-infringement.
+- **Buyer Beware**: If you get locked out of your Mac, you are solely responsible for recovering it (e.g., using the remote SSH or local Safe Mode recovery methods detailed below).
 
 ## Prerequisites
 
 - macOS 13.0 or later
-- Swift 5.8 or later
 - Accessibility permissions granted to the application (the app will prompt you with instructions on launch)
 
 ## Installation
 
-You can install ShieldLock directly using Homebrew:
+### 1. Via Homebrew (Recommended)
+
+You can install ShieldLock directly using Homebrew from the official tap:
 
 ```bash
 brew tap bendechrai/homebrew-tap
 brew install --cask shieldlock
 ```
 
-Alternatively, you can download the latest `ShieldLock.zip` from the [GitHub Releases](https://github.com/bendechrai/shieldlock/releases) page, extract it, and copy `ShieldLock.app` to your `/Applications` folder.
+### 2. Manual Download
 
-## Project Structure
+Alternatively, you can download the latest pre-compiled `ShieldLock.zip` from the [GitHub Releases](https://github.com/bendechrai/shieldlock/releases) page, extract it, and copy `ShieldLock.app` to your `/Applications` folder.
 
-- `./Package.swift`: Swift Package Manager configuration.
-- `./Sources/main.swift`: Entry point, AppDelegate, Event Tap configuration, and sleep prevention.
-- `./Sources/LockWindow.swift`: Custom full-screen window and view implementations, HUD presentation, and Local Authentication handling.
-- `./build.sh`: Custom build script to compile the application and construct the macOS application bundle.
-
-## Building and Packaging
-
-Run the custom build script to compile the executable and generate the code-signed application bundle `./build/ShieldLock.app`:
-
-```bash
-./build.sh
-```
-
-The script will compile the project in release mode, structure the bundle with proper `Info.plist` settings (including accessory mode and Face ID usage descriptions), and code-sign it.
-
-## Running ShieldLock
+## How to Use ShieldLock
 
 ShieldLock features intelligent, context-aware launch detection depending on whether it is configured as a login item:
 
@@ -59,36 +47,18 @@ ShieldLock features intelligent, context-aware launch detection depending on whe
 To start the application:
 
 ```bash
-open ./build/ShieldLock.app
+open /Applications/ShieldLock.app
 ```
 
-### Options
+### Command-Line Options
 
-If the app is already registered as a login item but you want to force the confirmation modal to display (e.g. to uncheck "Launch on login" or perform local testing), pass the `--confirm` flag:
+If the app is already registered as a login item but you want to force the confirmation modal to display (e.g., to uncheck "Launch on login" or perform local testing), pass the `--confirm` flag:
 
 ```bash
-open ./build/ShieldLock.app --args --confirm
+open /Applications/ShieldLock.app --args --confirm
 ```
 
 On first launch, if Accessibility permissions have not been granted, a helper window will appear with a button to open System Settings directly. Once granted, relaunch ShieldLock to secure the system.
-
-## Releasing to GitHub and Homebrew Cask
-
-An automated release script `./release.sh` is provided to streamline the manual distribution workflow:
-
-```bash
-./release.sh
-```
-
-This script will:
-1. Prompt you for a release version (e.g., `1.0.0`).
-2. Verify your git working directory is clean.
-3. Compile the application locally.
-4. Package the secure app bundle into a `ShieldLock.zip`.
-5. Compute the required SHA256 checksum for your Homebrew Cask.
-6. Create and push a version tag (e.g., `v1.0.0`) to your GitHub repository.
-7. Create a GitHub Release and upload `ShieldLock.zip` using the `gh` CLI.
-8. Output the ready-to-use Homebrew Cask configuration block with the updated version, download URL, and SHA256 checksum!
 
 ## Unlocking ShieldLock
 
@@ -96,9 +66,9 @@ To unlock and close ShieldLock, **double-click anywhere on any screen** to trigg
 
 During authentication, the transparent overlay remains active at `.screenSaver` window level to keep background content secure and prevent any unauthorized bypass.
 
-### Emergency Recovery / Locked Out?
+## Emergency Recovery / Locked Out?
 
-If you are completely locked out of the GUI (e.g. keyboard/mouse is not registering input):
+If you are completely locked out of the GUI (e.g., keyboard/mouse is not registering input):
 
 1. **Via SSH (Remote Recovery)**:
    - SSH into the machine from another device on your network and terminate the ShieldLock process:
@@ -133,7 +103,7 @@ When you download a pre-built `ShieldLock.app` from GitHub Releases or install i
 #### Method B: Remove Quarantine Flag (Terminal)
 If you prefer using the command line, remove the quarantine attribute directly by running:
 ```bash
-xattr -d com.apple.quarantine /path/to/ShieldLock.app
+xattr -d com.apple.quarantine /Applications/ShieldLock.app
 ```
 
 ---
@@ -151,17 +121,10 @@ To fix this after upgrading:
 
 ![macOS Accessibility Settings Reset](./docs/accessibility.png)
 
-## Disclaimer & No Warranty
+## Developer Documentation
 
-**CRITICAL: USE AT YOUR OWN RISK.**
-
-ShieldLock is a low-level system utility that intercepts system inputs and restricts macOS system behaviors. 
-
-By using this software, you agree that:
-- **No Liability**: The author and contributors of ShieldLock assume **absolutely no responsibility or liability** for any accidental GUI lockouts, system crashes, data loss, or bricked server access.
-- **No Warranty**: The software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, or non-infringement.
-- **Buyer Beware**: If you get locked out of your Mac, you are solely responsible for recovering it (e.g., using the remote SSH or local Safe Mode recovery methods detailed above).
+If you are a developer looking to build ShieldLock from source, contribute, or manage releases, see [DEVELOPER.md](./DEVELOPER.md).
 
 ## License
 
-This project is licensed under the MIT License - see `./LICENSE` for details.
+This project is licensed under the MIT License - see [LICENSE](./LICENSE) for details.
