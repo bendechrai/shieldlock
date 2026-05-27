@@ -43,7 +43,8 @@ Save to `{@artifacts_path}/spec.md` with:
 - Data model / API / interface changes
 - Verification approach using project lint/test commands
 
-### [ ] Step: Planning
+### [x] Step: Planning
+<!-- chat-id: 281afbd3-fec4-41ed-abaf-70f3f40a56e1 -->
 
 Create a detailed implementation plan based on `{@artifacts_path}/spec.md`.
 
@@ -59,8 +60,88 @@ If the feature is trivial and doesn't warrant full specification, update this wo
 
 Save to `{@artifacts_path}/plan.md`.
 
-### [ ] Step: Implementation
+### [ ] Step: Setup SPM and Build Scaffolding
+- Create `.gitignore` to ignore common macOS and build artifacts (e.g., `.DS_Store`, `.build/`, `build/`).
+- Create `Package.swift` to declare a Swift executable target named `ShieldLock`.
+- Create target directory `Sources/`.
+- Create a basic `Sources/main.swift` with an empty main function.
+- Create `./build.sh` script to:
+  - Run `swift build -c release` to compile the app.
+  - Create the bundle directory structure: `./build/ShieldLock.app/Contents/MacOS/` and `./build/ShieldLock.app/Contents/Resources/`.
+  - Copy the compiled binary from `.build/release/ShieldLock` to `./build/ShieldLock.app/Contents/MacOS/ShieldLock`.
+  - Generate the `./build/ShieldLock.app/Contents/Info.plist` with `LSUIElement` set to `true` (to run as an accessory/background app) and `CFBundlePackageType` set to `APPL`.
+  - Sign the bundle with ad-hoc code signature: `codesign --force --deep --sign - ./build/ShieldLock.app`.
+- **Verification**: Run `./build.sh`, verify it completes successfully, and verify the app bundle is compiled, structured correctly, and signed with `codesign -dvvvv ./build/ShieldLock.app`.
 
-This step should be replaced with detailed implementation tasks from the Planning step.
+### [ ] Step: Accessibility Bootstrapping and Help Window
+- In `Sources/main.swift`, check if accessibility permissions are authorized using `AXIsProcessTrusted()`.
+- If permissions are NOT trusted:
+  - Create and configure a standard interactive titled window (`NSWindowStyleMask.titled`) centered on the primary screen.
+  - Add text label instructions explaining that ShieldLock requires Accessibility Permissions to secure the keyboard/gestures, and directing the user to grant them.
+  - Add an interactive button labeled "Open System Settings" that opens `x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility`.
+  - Run the `NSApplication` event loop in this fallback state (do not engage full-screen lock windows).
+- If permissions ARE trusted:
+  - Run the app in background/accessory mode (empty for now).
+- **Verification**:
+  - Revoke accessibility permissions in System Settings (if any) or run the app on a fresh target. Launch `./build/ShieldLock.app` and verify the titled helper window appears with the "Open System Settings" button.
+  - Click the button to confirm it opens System Settings.
+  - Enable accessibility permissions for the app, relaunch, and verify the standard window does not appear.
 
-If Planning didn't replace this step, execute the tasks in `{@artifacts_path}/plan.md`, updating checkboxes as you go. Run planned tests/lint and record results in plan.md.
+### [ ] Step: Full-Screen Lock Windows and Sleep Prevention
+- Implement `LockWindow` (subclass of `NSWindow`) and `LockContentView` (subclass of `NSView`) in a new file `Sources/LockWindow.swift`.
+- In `main.swift` (when trusted), query `NSScreen.screens` and create a `LockWindow` instance for every connected display.
+- Configure `LockWindow` properties:
+  - Elevated window level: `NSWindow.Level.screenSaver`.
+  - Style mask: `[.borderless, .fullScreen]`.
+  - Collection behavior: `[.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]` to pin the window to all Spaces and exclude it from window cycling.
+  - Background color: `NSColor(white: 0.0, alpha: 0.005)` to capture mouse events while remaining transparent.
+  - Set `ignoresMouseEvents = false` and ensure the window is ordered front (`makeKeyAndOrderFront(nil)`).
+- Implement display and system sleep prevention on launch using `IOPMAssertionCreateWithName` from `IOKit` with type `kIOPMAssertionTypePreventUserIdleDisplaySleep` and `kIOPMAssertionTypePreventUserIdleSystemSleep`.
+- Release assertions and clean up windows on application termination.
+- **Verification**:
+  - Run `./build.sh` and launch the app.
+  - Verify that a fully transparent screen overlay is rendered across all displays (the screen looks normal but clicks on any background windows/desktop are intercepted and ignored).
+  - Verify that the terminal process/system remains awake.
+
+### [ ] Step: Input Interception and System Event Tap
+- In `main.swift`, set native AppKit presentation options when lock windows are active to restrict system keys and switching:
+  ```swift
+  NSApplication.shared.presentationOptions = [
+      .hideDock,
+      .hideMenuBar,
+      .disableProcessSwitching,
+      .disableForceQuit,
+      .disableSessionTermination,
+      .disableHideApplication
+  ]
+  ```
+- Implement a global event tap (`CGEventTap`) using `CGEvent.tapCreate` targeting `.cgSessionEventTap` or `.cghidEventTap` to intercept and consume system gestures, Mission Control (F3), Dashboard/Launchpad (F4), Spotlight (Command-Space), and standard desktop/Space switching swipes.
+- If accessibility permissions are not granted (though bootstrapping should have caught this), let the event tap fail gracefully and fallback to presentation options.
+- Ensure all intercepted keystrokes (except the fail-safe trigger) and clicks are consumed (discarded) by the event tap and main window.
+- **Verification**:
+  - Launch ShieldLock with accessibility permissions enabled.
+  - Verify the Dock and Menu Bar are hidden.
+  - Test and verify that Command-Tab (App Switcher), Command-Option-Esc (Force Quit), and Mission Control are completely blocked.
+  - Verify that trackpad swipe gestures to change Spaces are completely non-functional.
+
+### [ ] Step: Authentication Flow and Fail-Safe Unlock
+- In `LockContentView`, monitor keyboard input events:
+  - If the user presses the 'U' (or 'u') key, instantly bypass authentication and invoke the `unlockAndExit()` routine to dismiss windows, release sleep assertions, and terminate.
+  - For other key presses, consume the event and show a brief HUD/visual hint ("Double-click or press 'U' to unlock").
+- In `LockContentView`, monitor mouse/trackpad events:
+  - Detect double-clicks (`event.clickCount == 2`). On double-click, trigger the `LocalAuthentication` flow.
+- Implement secure authentication handling using `LAContext` to prevent deadlocks:
+  1. Temporarily disable the global event tap (`CGEventTapEnable(tapPort, false)`).
+  2. Suspend AppKit kiosk presentation options (`NSApplication.shared.presentationOptions = []`).
+  3. Lower lock windows levels to `.normal` and set `ignoresMouseEvents = true` so the user can interact with the system Touch ID / password prompt sheet.
+  4. Perform `LAContext.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock ShieldLock")`.
+  5. On callback completion (success, cancellation, or failure):
+     - Restore all lock windows to level `.screenSaver`, and set `ignoresMouseEvents = false`.
+     - Re-enable the event tap and restore native presentation options.
+     - If authentication succeeded, call `unlockAndExit()`. If failed/canceled, keep the overlay locked.
+- **Verification**:
+  - Launch ShieldLock. Verify that pressing 'U' (or 'u') immediately exits the app and restores all normal system behaviors.
+  - Relaunch ShieldLock. Double-click on the screen. Verify that the Touch ID / Password prompt dialog is presented.
+  - Verify that during the prompt, you can interact with the dialog (Touch ID works, or typing the system password works).
+  - Verify that clicking "Cancel" in the prompt re-locks the screen immediately, re-enabling input interception, event tap, and AppKit kiosk options.
+  - Verify that authenticating successfully exits the app cleanly.
