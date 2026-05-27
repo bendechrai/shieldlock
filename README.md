@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./docs/logo.png" alt="ShieldLock Logo" width="160" height="160" />
+</p>
+
 # ShieldLock
 
 ShieldLock is an open-source, full-screen transparent screen locker for macOS. It is designed for always-on servers (like a MacBook Air server) or presentation/booth laptops where you want the screen content to remain visible, but want to prevent unauthorized application switching, desktop swipes, or system gestures.
