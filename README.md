@@ -64,18 +64,20 @@ On first launch, if Accessibility permissions have not been granted, a helper wi
 
 To unlock and close ShieldLock, **double-click anywhere on any screen** to trigger the macOS Local Authentication dialog (Touch ID or your user password). 
 
-During authentication, the transparent overlay remains active at `.screenSaver` window level to keep background content secure and prevent any unauthorized bypass.
+During authentication, the macOS Touch ID/password prompt renders above the transparent overlay so you can interact with it. The overlay sits at `.popUpMenu` window level - high enough to cover all normal application windows and the menu bar, but low enough that system authentication UI (and the real macOS lock/login window) remain reachable above it.
 
 ## Emergency Recovery / Locked Out?
 
 If you are completely locked out of the GUI (e.g., keyboard/mouse is not registering input):
 
 1. **Via SSH (Remote Recovery)**:
+   - **Prerequisite**: Remote Login must have been enabled *before* you got locked out. Turn it on under **System Settings > General > Sharing > Remote Login**. If it was not enabled in advance, skip to the Safe Mode option below.
    - SSH into the machine from another device on your network and terminate the ShieldLock process:
      ```bash
-     killall ShieldLock
+     ssh user@your-mac.local
+     pkill ShieldLock
      ```
-     This will instantly dismiss all lock windows, release the event tap, restore standard system presentation options (Dock and Menu Bar), and terminate the application safely.
+     `pkill` sends `SIGTERM`, which lets ShieldLock clean up gracefully - dismissing all lock windows, releasing the event tap, restoring standard system presentation options (Dock and Menu Bar), and terminating the application safely. If for any reason the process doesn't exit, `killall -9 ShieldLock` (or `kill -9 <pid>`) will force-terminate it; macOS reclaims the presentation options on process exit either way.
 
 2. **Via Safe Mode (Local Recovery)**:
    - If you cannot SSH in, force-restart your Mac and boot into **Safe Mode**:

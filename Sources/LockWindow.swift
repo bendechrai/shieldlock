@@ -102,7 +102,7 @@ class LockWindow: NSWindow {
             backing: .buffered,
             defer: false
         )
-        self.level = .screenSaver
+        self.level = .popUpMenu
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         self.backgroundColor = NSColor(white: 0.0, alpha: 0.005)
         self.isOpaque = false
