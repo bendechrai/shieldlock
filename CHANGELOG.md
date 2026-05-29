@@ -4,6 +4,16 @@ All notable changes to ShieldLock are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-05-29
+
+### Changed
+- Releases are now signed with a stable self-signed code-signing identity (`ShieldLock Developer`) instead of ad-hoc. This means macOS Accessibility (TCC) permissions persist across upgrades from 1.0.5 onwards - no more manual reset required after each upgrade.
+- `build.sh` now prefers the `ShieldLock Developer` signing identity (overridable via the `SHIELDLOCK_SIGN_IDENTITY` environment variable) and falls back to ad-hoc signing if the identity is not present in the keychain, so contributor builds keep working unchanged.
+- Documented the cert setup, the keychain quirks that prevent SSH-only release builds, and the recommended local-console / Screen Sharing workflow in `DEVELOPER.md`.
+
+### Upgrade Notes
+- **One-time TCC reset required when upgrading from 1.0.4 or earlier.** Because the signing identity changes from ad-hoc to the new self-signed cert, macOS treats 1.0.5 as a new app and invalidates the previously granted Accessibility permission. Remove ShieldLock from **System Settings > Privacy & Security > Accessibility** and re-grant on next launch. All subsequent upgrades preserve the grant automatically.
+
 ## [1.0.4] - 2026-05-29
 
 ### Fixed
@@ -56,6 +66,7 @@ Initial public release.
 - `release.sh` automation script (build, package, tag, GitHub release, Homebrew Cask snippet).
 - Emergency recovery documentation covering SSH and Safe Mode.
 
+[1.0.5]: https://github.com/bendechrai/shieldlock/releases/tag/v1.0.5
 [1.0.4]: https://github.com/bendechrai/shieldlock/releases/tag/v1.0.4
 [1.0.3]: https://github.com/bendechrai/shieldlock/releases/tag/v1.0.3
 [1.0.2]: https://github.com/bendechrai/shieldlock/releases/tag/v1.0.2

@@ -59,4 +59,12 @@ cat << 'EOF' > build/ShieldLock.app/Contents/Info.plist
 </plist>
 EOF
 
-codesign --force --deep --sign - build/ShieldLock.app
+SIGN_IDENTITY="${SHIELDLOCK_SIGN_IDENTITY:-ShieldLock Developer}"
+if security find-identity -v -p codesigning | grep -q "$SIGN_IDENTITY"; then
+    echo "Code signing with identity: $SIGN_IDENTITY"
+    codesign --force --deep --sign "$SIGN_IDENTITY" build/ShieldLock.app
+else
+    echo "Code signing identity '$SIGN_IDENTITY' not found in keychain; falling back to ad-hoc."
+    echo "Note: TCC permissions (Accessibility) will not persist across upgrades of ad-hoc-signed builds."
+    codesign --force --deep --sign - build/ShieldLock.app
+fi

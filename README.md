@@ -112,14 +112,17 @@ xattr -d com.apple.quarantine /Applications/ShieldLock.app
 
 ### 2. Upgrading & Resetting Accessibility Permissions
 
-macOS ties Accessibility permissions directly to the binary's cryptographic hash for ad-hoc signed applications. **Whenever you upgrade to a new version of ShieldLock, macOS will silently invalidate the previously granted permissions** (even if the toggle in settings still shows as "On").
+Starting with **ShieldLock 1.0.5**, releases are signed with a stable self-signed code-signing identity. macOS ties Accessibility (TCC) permissions to that identity, so upgrades from 1.0.5 onwards preserve your Accessibility grant - no manual reset required.
 
-To fix this after upgrading:
+**Upgrading from 1.0.4 or earlier to 1.0.5 is a one-time exception.** Those builds were ad-hoc signed (each build had a different cryptographic identity), so macOS will silently invalidate the previously granted Accessibility permission on this single upgrade. You need to manually reset it once:
+
 1. Open **System Settings > Privacy & Security > Accessibility**.
 2. Select **ShieldLock** in the list of applications.
 3. Click the **`-` (Minus)** button at the bottom of the list to delete it completely.
 4. Launch the new version of ShieldLock.
 5. When the ShieldLock helper window prompts you, click **Open System Settings** and grant Accessibility permissions freshly.
+
+After this one-time reset, all future upgrades preserve your Accessibility permission automatically.
 
 ![macOS Accessibility Settings Reset](./docs/accessibility.png)
 
